@@ -48,6 +48,10 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/ws/**").authenticated()
                         .requestMatchers("/api/products/**").hasAnyRole("MANAGER", "STAFF")
+                        .requestMatchers("/api/customers/**").hasAnyRole("MANAGER", "STAFF")
+                        .requestMatchers(HttpMethod.GET, "/api/suppliers/**").hasAnyRole("MANAGER", "STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/suppliers/**").hasRole("MANAGER")
+                        .requestMatchers(HttpMethod.PUT, "/api/suppliers/**").hasRole("MANAGER")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -61,7 +65,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "If-Match"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

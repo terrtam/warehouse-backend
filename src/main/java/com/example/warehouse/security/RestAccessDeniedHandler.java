@@ -50,6 +50,16 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
         if (uri.startsWith("/api/products")) {
             return "Requires role: ROLE_MANAGER or ROLE_STAFF";
         }
+        if (uri.startsWith("/api/suppliers")) {
+            String method = request.getMethod();
+            if ("GET".equalsIgnoreCase(method)) {
+                return "Requires role: ROLE_MANAGER or ROLE_STAFF";
+            }
+            if ("POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method)) {
+                return "Requires role: ROLE_MANAGER";
+            }
+            return "Requires role: ROLE_MANAGER";
+        }
         if (uri.startsWith("/ws")) {
             return "Requires authentication";
         }

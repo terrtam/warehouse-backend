@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -64,6 +65,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
+        String text = ex.getMostSpecificCause() != null
+                ? ex.getMostSpecificCause().getMessage()
+                : ex.getMessage();
+        if (text != null) {
+            String normalized = text.toLowerCase(Locale.ENGLISH);
+            if ((normalized.contains("customers") || normalized.contains("customer"))
+                    && normalized.contains("email")
+                    && (normalized.contains("duplicate") || normalized.contains("unique"))) {
+                return build(HttpStatus.CONFLICT, "CONFLICT", "Customer email already exists", null);
+            }
+        }
         return build(HttpStatus.BAD_REQUEST, "VALIDATION", "Constraint violation", null);
     }
 

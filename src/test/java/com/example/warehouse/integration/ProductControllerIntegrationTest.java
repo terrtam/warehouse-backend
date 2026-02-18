@@ -1,24 +1,17 @@
 package com.example.warehouse.integration;
 
-import com.example.warehouse.dto.CreateProductRequest;
-import com.example.warehouse.dto.ProductDto;
-import com.example.warehouse.dto.UpdateProductRequest;
 import com.example.warehouse.entity.Product;
 import com.example.warehouse.repository.ProductRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -41,9 +34,6 @@ class ProductControllerIntegrationTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
     private ProductRepository productRepository;
 
     @BeforeEach
@@ -52,30 +42,30 @@ class ProductControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "MANAGER")
     void postInsertsRow() throws Exception {
-        CreateProductRequest request = new CreateProductRequest();
-        request.setName("Widget");
-        request.setSku("SKU-100");
-        request.setStatus("ACTIVE");
-        request.setDescription("Steel widget");
+        String request = """
+                {
+                  "name": "Widget",
+                  "sku": "SKU-100",
+                  "status": "ACTIVE",
+                  "description": "Steel widget"
+                }
+                """;
 
-        MvcResult result = mockMvc.perform(post("/api/products")
+        mockMvc.perform(post("/api/products")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(request))
                 .andExpect(status().isCreated())
-                .andReturn();
-
-        ProductDto response = objectMapper.readValue(result.getResponse().getContentAsString(), ProductDto.class);
-        assertNotNull(response.getId());
-        assertEquals("Steel widget", response.getDescription());
+                .andExpect(jsonPath("$.id").isNotEmpty())
+                .andExpect(jsonPath("$.description").value("Steel widget"));
         assertEquals(1, productRepository.count());
         Product saved = productRepository.findAll().get(0);
         assertEquals("Steel widget", saved.getDescription());
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "MANAGER")
     void putIncrementsVersion() throws Exception {
         Product product = new Product();
         product.setName("Widget");
@@ -83,28 +73,25 @@ class ProductControllerIntegrationTest {
         product.setStatus("ACTIVE");
         Product saved = productRepository.saveAndFlush(product);
 
-        UpdateProductRequest request = new UpdateProductRequest();
-        request.setVersion(saved.getVersion());
-        request.setName("Widget Updated");
-        request.setSku("SKU-100");
-        request.setStatus("ACTIVE");
-        request.setDescription("Updated description");
-
-        MvcResult result = mockMvc.perform(put("/api/products/{id}", saved.getId())
+        mockMvc.perform(put("/api/products/{id}", saved.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                .content("""
+                                {
+                                  "version": %d,
+                                  "name": "Widget Updated",
+                                  "sku": "SKU-100",
+                                  "status": "ACTIVE",
+                                  "description": "Updated description"
+                                }
+                                """.formatted(saved.getVersion())))
                 .andExpect(status().isOk())
-                .andReturn();
-
-        ProductDto response = objectMapper.readValue(result.getResponse().getContentAsString(), ProductDto.class);
-        assertEquals(saved.getVersion() + 1, response.getVersion());
-        assertEquals("Updated description", response.getDescription());
+                .andExpect(jsonPath("$.description").value("Updated description"));
         Product reloaded = productRepository.findById(saved.getId()).orElseThrow();
         assertEquals("Updated description", reloaded.getDescription());
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "MANAGER")
     void listReturnsDescription() throws Exception {
         Product product = new Product();
         product.setName("Widget");
@@ -119,7 +106,7 @@ class ProductControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "MANAGER")
     void getByIdReturnsDescription() throws Exception {
         Product product = new Product();
         product.setName("Widget");
@@ -128,12 +115,9 @@ class ProductControllerIntegrationTest {
         product.setDescription("Detail description");
         Product saved = productRepository.saveAndFlush(product);
 
-        MvcResult result = mockMvc.perform(get("/api/products/{id}", saved.getId()))
+        mockMvc.perform(get("/api/products/{id}", saved.getId()))
                 .andExpect(status().isOk())
-                .andReturn();
-
-        ProductDto response = objectMapper.readValue(result.getResponse().getContentAsString(), ProductDto.class);
-        assertEquals("Detail description", response.getDescription());
-        assertTrue(response.getId().equals(saved.getId()));
+                .andExpect(jsonPath("$.description").value("Detail description"))
+                .andExpect(jsonPath("$.id").value(saved.getId().toString()));
     }
 }

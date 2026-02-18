@@ -1,0 +1,20 @@
+package com.example.warehouse.repository;
+
+import com.example.warehouse.entity.CustomerEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.time.Instant;
+import java.util.UUID;
+
+@Repository
+public interface CustomerRepository extends JpaRepository<CustomerEntity, UUID> {
+
+    boolean existsByEmail(String email);
+
+    boolean existsByEmailAndIdNot(String email, UUID id);
+
+    Page<CustomerEntity> findAllByUpdatedAtGreaterThan(Instant updatedAfter, Pageable pageable);
+}
