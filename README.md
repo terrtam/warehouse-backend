@@ -4,6 +4,10 @@
 
 Spring Boot backend that provides the Warehouse Management System (WMS) APIs, authentication, reporting, and realtime updates.
 
+Repository:
+
+- Frontend: [warehouse-frontend](https://github.com/terrtam/warehouse-frontend)
+
 ## Tech Stack
 
 - Java 17
