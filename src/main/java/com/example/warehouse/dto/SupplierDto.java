@@ -11,6 +11,7 @@ public class SupplierDto {
     private String phone;
     private String address;
     private String status;
+    private String notes;
     private Long version;
     private Instant createdAt;
     private Instant updatedAt;
@@ -61,6 +62,14 @@ public class SupplierDto {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 
     public Long getVersion() {

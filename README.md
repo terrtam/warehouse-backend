@@ -1,26 +1,117 @@
-# Warehouse Backend
+# Backend
 
-## Customer Sync Guide for Consumer Services
+## Overview
 
-Use this sequence to keep a consumer read model in sync with `/api/customers` and `/topic/customers`.
+Spring Boot backend that provides the Warehouse Management System (WMS) APIs, authentication, reporting, and realtime updates.
 
-1. Initial fetch:
-   - Call `GET /api/customers?page=0&size=200` and keep paging until done.
-   - Sort is by `updatedAt` ascending by default.
-   - Persist records and store a checkpoint timestamp equal to the max `updatedAt` seen.
-2. Live updates:
-   - Open STOMP websocket connection to `/ws`.
-   - Subscribe to `/topic/customers`.
-   - Handle events with schema:
-     - `eventType`: `CUSTOMER_CREATED` or `CUSTOMER_UPDATED`
-     - `customer`: full `CustomerDto`
-     - `occurredAt`: ISO-8601 timestamp
-   - Upsert `customer` by `id`.
-   - Move checkpoint to `max(checkpoint, customer.updatedAt)`.
-3. Reconnect replay:
-   - On disconnect/reconnect, call `GET /api/customers?updatedAfter=<checkpoint>&page=0&size=200`.
-   - Apply returned rows in order and advance checkpoint.
-   - Re-subscribe to `/topic/customers`.
-4. Idempotency:
-   - Use `id` as primary key and `version` for last-write-wins checks.
-   - Ignore stale rows/events where incoming `version` is lower than stored `version`.
+## Tech Stack
+
+- Java 17
+- Spring Boot (Web MVC, Security, Validation, WebSocket, Mail)
+- Spring Data JPA + Hibernate
+- PostgreSQL
+- Flyway migrations
+- Maven (wrapper)
+
+## Architecture
+
+- `controller` - REST endpoints
+- `service` - business logic and workflows
+- `repository` - JPA repositories
+- `entity` - database entities
+- `dto` - request/response models
+- `event` + `realtime` - domain events and STOMP topic publishing
+- `security` - JWT auth, filters, and access control
+- `config` - Spring configuration (including WebSocket)
+- `src/main/resources/db/migration` - Flyway SQL migrations
+
+## Features
+
+- JWT-based login endpoint
+- Products, categories, customers, and suppliers management
+- Sales and purchase order workflows
+- Inventory adjustments and transaction history
+- Reporting endpoints for sales, purchasing, supplier performance, velocity, and low-stock trends
+- Audit log and communication log queries
+- Realtime updates over WebSocket/STOMP
+
+## API Endpoints
+
+- `POST /auth/login`
+- `GET /api/products`
+- `GET /api/products/{id}`
+- `POST /api/products`
+- `PUT /api/products/{id}`
+- `DELETE /api/products/{id}`
+- `GET /api/categories`
+- `POST /api/categories`
+- `PUT /api/categories/{id}`
+- `GET /api/customers`
+- `GET /api/customers/{id}`
+- `POST /api/customers`
+- `PUT /api/customers/{id}`
+- `DELETE /api/customers/{id}`
+- `GET /api/suppliers`
+- `GET /api/suppliers/{id}`
+- `POST /api/suppliers`
+- `PUT /api/suppliers/{id}`
+- `DELETE /api/suppliers/{id}`
+- `GET /api/inventory`
+- `POST /api/inventory/adjustments`
+- `GET /api/inventory/transactions`
+- `GET /api/sales-orders`
+- `POST /api/sales-orders`
+- `POST /api/sales-orders/{id}/confirm`
+- `POST /api/sales-orders/{id}/ship`
+- `POST /api/sales-orders/{id}/cancel`
+- `GET /api/purchase-orders`
+- `POST /api/purchase-orders`
+- `POST /api/purchase-orders/{id}/order`
+- `POST /api/purchase-orders/{id}/receive`
+- `POST /api/purchase-orders/{id}/cancel`
+- `GET /api/reports/sales-by-product`
+- `GET /api/reports/sales-by-category`
+- `GET /api/reports/purchase-cost-tracking`
+- `GET /api/reports/supplier-performance`
+- `GET /api/reports/velocity`
+- `GET /api/reports/low-stock-trends`
+- `GET /api/audit-log`
+- `GET /api/communications`
+
+## Environment Variables
+
+```env
+WMS_DB_URL=jdbc:postgresql://localhost:5432/warehouse
+WMS_DB_USERNAME=postgres
+WMS_DB_PASSWORD=your_database_password
+
+WMS_JWT_SECRET=replace_with_at_least_32_ascii_characters
+WMS_JWT_EXPIRATION_MS=3600000
+
+WMS_COMMUNICATION_EMAIL_ENABLED=false
+
+WMS_SMTP_HOST=localhost
+WMS_SMTP_PORT=1025
+WMS_SMTP_USERNAME=
+WMS_SMTP_PASSWORD=
+WMS_SMTP_AUTH=false
+WMS_SMTP_STARTTLS_ENABLE=false
+
+WMS_EMAIL_FROM=no-reply@warehouse.local
+```
+
+## Setup Instructions
+
+1. Ensure PostgreSQL is running and the database in `WMS_DB_URL` exists.
+2. Copy `backend/.env.example` to `backend/.env` and update values as needed.
+3. Start the service:
+
+```bash
+./mvnw spring-boot:run
+```
+
+## Notes
+
+- `.env` is loaded automatically via `spring.config.import`.
+- WebSocket endpoint: `/ws`
+- STOMP topics: `/topic/products`, `/topic/categories`, `/topic/inventory`, `/topic/orders`, `/topic/customers`, `/topic/suppliers`, `/topic/communications`

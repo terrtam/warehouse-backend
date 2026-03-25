@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -27,6 +28,9 @@ public class SupplierService {
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+
+    @Autowired
+    private EntityAuditService entityAuditService;
 
     @Transactional(readOnly = true)
     public SupplierDto getSupplier(UUID id) {
@@ -49,6 +53,7 @@ public class SupplierService {
         applyCreateRequest(supplier, request);
 
         SupplierEntity saved = supplierRepository.saveAndFlush(supplier);
+        entityAuditService.log("SUPPLIER", saved.getId(), "CREATE", null, saved.getStatus());
         eventPublisher.publishEvent(SupplierChangedEvent.created(saved.getId(), saved.getVersion()));
         return toDto(saved);
     }
@@ -64,8 +69,24 @@ public class SupplierService {
 
         applyUpdateRequest(supplier, request);
         SupplierEntity saved = supplierRepository.saveAndFlush(supplier);
+        entityAuditService.log("SUPPLIER", saved.getId(), "UPDATE", null, saved.getStatus());
         eventPublisher.publishEvent(SupplierChangedEvent.updated(saved.getId(), saved.getVersion()));
         return toDto(saved);
+    }
+
+    @Transactional
+    public void deactivateSupplier(UUID id) {
+        SupplierEntity supplier = supplierRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Supplier not found"));
+        String oldStatus = supplier.getStatus();
+        if ("INACTIVE".equalsIgnoreCase(oldStatus)) {
+            return;
+        }
+
+        supplier.setStatus("INACTIVE");
+        SupplierEntity saved = supplierRepository.saveAndFlush(supplier);
+        entityAuditService.log("SUPPLIER", saved.getId(), "DEACTIVATE", oldStatus, saved.getStatus());
+        eventPublisher.publishEvent(SupplierChangedEvent.updated(saved.getId(), saved.getVersion()));
     }
 
     private void applyCreateRequest(SupplierEntity supplier, CreateSupplierRequest request) {
@@ -73,7 +94,8 @@ public class SupplierService {
         supplier.setEmail(normalizeNullable(request.getEmail()));
         supplier.setPhone(normalizeNullable(request.getPhone()));
         supplier.setAddress(normalizeNullable(request.getAddress()));
-        supplier.setStatus(normalizeNullable(request.getStatus()));
+        supplier.setStatus(normalizeStatus(request.getStatus()));
+        supplier.setNotes(normalizeNullable(request.getNotes()));
     }
 
     private void applyUpdateRequest(SupplierEntity supplier, UpdateSupplierRequest request) {
@@ -81,7 +103,8 @@ public class SupplierService {
         supplier.setEmail(normalizeNullable(request.getEmail()));
         supplier.setPhone(normalizeNullable(request.getPhone()));
         supplier.setAddress(normalizeNullable(request.getAddress()));
-        supplier.setStatus(normalizeNullable(request.getStatus()));
+        supplier.setStatus(normalizeStatus(request.getStatus()));
+        supplier.setNotes(normalizeNullable(request.getNotes()));
     }
 
     private String normalizeNullable(String value) {
@@ -100,9 +123,17 @@ public class SupplierService {
         dto.setPhone(supplier.getPhone());
         dto.setAddress(supplier.getAddress());
         dto.setStatus(supplier.getStatus());
+        dto.setNotes(supplier.getNotes());
         dto.setVersion(supplier.getVersion());
         dto.setCreatedAt(supplier.getCreatedAt());
         dto.setUpdatedAt(supplier.getUpdatedAt());
         return dto;
+    }
+
+    private String normalizeStatus(String value) {
+        if (value == null || value.isBlank()) {
+            return SupplierEntity.DEFAULT_STATUS;
+        }
+        return value.trim().toUpperCase(Locale.ENGLISH);
     }
 }

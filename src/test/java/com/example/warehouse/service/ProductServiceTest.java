@@ -35,6 +35,9 @@ class ProductServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private EntityAuditService entityAuditService;
+
     @InjectMocks
     private ProductService productService;
 

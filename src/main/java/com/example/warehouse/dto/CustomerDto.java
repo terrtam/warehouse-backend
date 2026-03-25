@@ -9,7 +9,9 @@ public class CustomerDto {
     private String name;
     private String email;
     private String phone;
+    private String address;
     private String status;
+    private String notes;
     private Instant createdAt;
     private Instant updatedAt;
     private Long version;
@@ -52,6 +54,22 @@ public class CustomerDto {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 
     public Instant getCreatedAt() {

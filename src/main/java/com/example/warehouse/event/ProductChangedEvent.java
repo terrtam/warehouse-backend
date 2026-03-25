@@ -25,6 +25,10 @@ public class ProductChangedEvent {
         return new ProductChangedEvent("product.updated", id, version, Instant.now());
     }
 
+    public static ProductChangedEvent deleted(UUID id, Long version) {
+        return new ProductChangedEvent("product.deleted", id, version, Instant.now());
+    }
+
     public String getType() {
         return type;
     }

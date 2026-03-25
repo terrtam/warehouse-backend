@@ -27,6 +27,8 @@ public class UpdateSupplierRequest {
     @Size(max = 50)
     private String status;
 
+    private String notes;
+
     @AssertTrue(message = "at least one of email or phone is required")
     public boolean isContactProvided() {
         return hasText(email) || hasText(phone);
@@ -82,5 +84,13 @@ public class UpdateSupplierRequest {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 }

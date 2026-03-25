@@ -47,11 +47,41 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/ws/**").authenticated()
-                        .requestMatchers("/api/products/**").hasAnyRole("MANAGER", "STAFF")
-                        .requestMatchers("/api/customers/**").hasAnyRole("MANAGER", "STAFF")
+                        .requestMatchers(HttpMethod.GET, "/api/products/**").hasAnyRole("MANAGER", "STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/products/**").hasRole("MANAGER")
+                        .requestMatchers(HttpMethod.PUT, "/api/products/**").hasRole("MANAGER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("MANAGER")
+
+                        .requestMatchers(HttpMethod.GET, "/api/categories/**").hasAnyRole("MANAGER", "STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/categories/**").hasRole("MANAGER")
+                        .requestMatchers(HttpMethod.PUT, "/api/categories/**").hasRole("MANAGER")
+
+                        .requestMatchers(HttpMethod.GET, "/api/customers/**").hasAnyRole("MANAGER", "STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/customers/**").hasRole("MANAGER")
+                        .requestMatchers(HttpMethod.PUT, "/api/customers/**").hasRole("MANAGER")
+
                         .requestMatchers(HttpMethod.GET, "/api/suppliers/**").hasAnyRole("MANAGER", "STAFF")
                         .requestMatchers(HttpMethod.POST, "/api/suppliers/**").hasRole("MANAGER")
                         .requestMatchers(HttpMethod.PUT, "/api/suppliers/**").hasRole("MANAGER")
+
+                        .requestMatchers(HttpMethod.GET, "/api/sales-orders/**").hasAnyRole("MANAGER", "STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/sales-orders/*/ship").hasAnyRole("MANAGER", "STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/sales-orders/*/confirm").hasRole("MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/api/sales-orders/*/cancel").hasRole("MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/api/sales-orders").hasRole("MANAGER")
+
+                        .requestMatchers(HttpMethod.GET, "/api/purchase-orders/**").hasAnyRole("MANAGER", "STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/purchase-orders/*/receive").hasAnyRole("MANAGER", "STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/purchase-orders/*/order").hasRole("MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/api/purchase-orders/*/cancel").hasRole("MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/api/purchase-orders").hasRole("MANAGER")
+
+                        .requestMatchers(HttpMethod.GET, "/api/inventory/**").hasAnyRole("MANAGER", "STAFF")
+                        .requestMatchers(HttpMethod.POST, "/api/inventory/adjustments").hasAnyRole("MANAGER", "STAFF")
+
+                        .requestMatchers(HttpMethod.GET, "/api/communications/**").hasAnyRole("MANAGER", "STAFF")
+                        .requestMatchers(HttpMethod.GET, "/api/audit-log/**").hasRole("MANAGER")
+                        .requestMatchers(HttpMethod.GET, "/api/reports/**").hasRole("MANAGER")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

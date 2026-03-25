@@ -1,8 +1,21 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
   datasource:
-    url: jdbc:postgresql://localhost:5432/warehouse
-    username: postgres
-    password: ILikeOJ123!
+    url: ${WMS_DB_URL:jdbc:postgresql://localhost:5432/warehouse}
+    username: ${WMS_DB_USERNAME:postgres}
+    password: ${WMS_DB_PASSWORD:postgres}
+  mail:
+    host: ${WMS_SMTP_HOST:localhost}
+    port: ${WMS_SMTP_PORT:1025}
+    username: ${WMS_SMTP_USERNAME:}
+    password: ${WMS_SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${WMS_SMTP_AUTH:false}
+          starttls:
+            enable: ${WMS_SMTP_STARTTLS_ENABLE:false}
 
   jpa:
     hibernate:
@@ -12,7 +25,16 @@ spring:
   flyway:
     enabled: true
 
+wms:
+  communication:
+    email:
+      enabled: ${WMS_COMMUNICATION_EMAIL_ENABLED:false}
+      from: ${WMS_EMAIL_FROM:no-reply@warehouse.local}
+      blocked-recipient-suffixes:
+        - .test
+        - .local
+
 jwt:
   # Minimum 32 ASCII chars for HS256. Replace in production.
-  secret: "dev-secret-change-me-please-32chars"
-  expiration-ms: 3600000
+  secret: ${WMS_JWT_SECRET:dev-secret-change-me-please-32chars}
+  expiration-ms: ${WMS_JWT_EXPIRATION_MS:3600000}

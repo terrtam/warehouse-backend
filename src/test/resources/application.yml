@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:warehouse-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  flyway:
+    enabled: false
+
+wms:
+  communication:
+    email:
+      enabled: false
+      from: no-reply@warehouse.local
+      blocked-recipient-suffixes:
+        - .test
+        - .local
+
+jwt:
+  secret: "test-secret-change-me-please-32chars"
+  expiration-ms: 3600000

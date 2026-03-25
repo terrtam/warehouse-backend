@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
@@ -32,6 +33,9 @@ public class CustomerService {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
+    @Autowired
+    private EntityAuditService entityAuditService;
+
     @Transactional(readOnly = true)
     public CustomerDto getCustomer(UUID id) {
         CustomerEntity customer = customerRepository.findById(id)
@@ -41,10 +45,28 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public Page<CustomerDto> listCustomers(Instant updatedAfter, Pageable pageable) {
+        Instant normalizedCheckpoint = normalizeReplayCheckpoint(updatedAfter);
         Page<CustomerEntity> page = updatedAfter == null
                 ? customerRepository.findAll(pageable)
-                : customerRepository.findAllByUpdatedAtGreaterThan(updatedAfter, pageable);
+                : customerRepository.findAllByUpdatedAtGreaterThan(normalizedCheckpoint, pageable);
         return page.map(this::toDto);
+    }
+
+    /**
+     * Replay checkpoints can be captured with a higher precision than the backing DB column.
+     * Normalize to microsecond precision and round up when needed so strict "greater than"
+     * queries don't re-emit the checkpoint row.
+     */
+    private Instant normalizeReplayCheckpoint(Instant updatedAfter) {
+        if (updatedAfter == null) {
+            return null;
+        }
+
+        Instant truncated = updatedAfter.truncatedTo(ChronoUnit.MICROS);
+        if (truncated.isBefore(updatedAfter)) {
+            return truncated.plus(1, ChronoUnit.MICROS);
+        }
+        return truncated;
     }
 
     @Transactional
@@ -57,6 +79,7 @@ public class CustomerService {
         applyCreateRequest(customer, request);
         CustomerEntity saved = saveHandlingDuplicateEmail(customer);
         CustomerDto customerDto = toDto(saved);
+        entityAuditService.log("CUSTOMER", saved.getId(), "CREATE", null, customerDto.getStatus());
         eventPublisher.publishEvent(CustomerChangedEvent.created(customerDto));
         return customerDto;
     }
@@ -77,8 +100,25 @@ public class CustomerService {
         applyUpdateRequest(customer, request);
         CustomerEntity saved = saveHandlingDuplicateEmail(customer);
         CustomerDto customerDto = toDto(saved);
+        entityAuditService.log("CUSTOMER", saved.getId(), "UPDATE", null, customerDto.getStatus());
         eventPublisher.publishEvent(CustomerChangedEvent.updated(customerDto));
         return customerDto;
+    }
+
+    @Transactional
+    public void deactivateCustomer(UUID id) {
+        CustomerEntity customer = customerRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Customer not found"));
+        String oldStatus = customer.getStatus();
+        if ("INACTIVE".equalsIgnoreCase(oldStatus)) {
+            return;
+        }
+
+        customer.setStatus("INACTIVE");
+        CustomerEntity saved = customerRepository.saveAndFlush(customer);
+        CustomerDto customerDto = toDto(saved);
+        entityAuditService.log("CUSTOMER", saved.getId(), "DEACTIVATE", oldStatus, customerDto.getStatus());
+        eventPublisher.publishEvent(CustomerChangedEvent.updated(customerDto));
     }
 
     private CustomerEntity saveHandlingDuplicateEmail(CustomerEntity customer) {
@@ -108,15 +148,19 @@ public class CustomerService {
     private void applyCreateRequest(CustomerEntity customer, CreateCustomerRequest request) {
         customer.setName(request.getName());
         customer.setEmail(request.getEmail());
-        customer.setPhone(request.getPhone());
-        customer.setStatus(request.getStatus());
+        customer.setPhone(normalizeNullable(request.getPhone()));
+        customer.setAddress(normalizeNullable(request.getAddress()));
+        customer.setStatus(normalizeStatus(request.getStatus()));
+        customer.setNotes(normalizeNullable(request.getNotes()));
     }
 
     private void applyUpdateRequest(CustomerEntity customer, UpdateCustomerRequest request) {
         customer.setName(request.getName());
         customer.setEmail(request.getEmail());
-        customer.setPhone(request.getPhone());
-        customer.setStatus(request.getStatus());
+        customer.setPhone(normalizeNullable(request.getPhone()));
+        customer.setAddress(normalizeNullable(request.getAddress()));
+        customer.setStatus(normalizeStatus(request.getStatus()));
+        customer.setNotes(normalizeNullable(request.getNotes()));
     }
 
     private CustomerDto toDto(CustomerEntity customer) {
@@ -125,10 +169,27 @@ public class CustomerService {
         dto.setName(customer.getName());
         dto.setEmail(customer.getEmail());
         dto.setPhone(customer.getPhone());
+        dto.setAddress(customer.getAddress());
         dto.setStatus(customer.getStatus());
+        dto.setNotes(customer.getNotes());
         dto.setCreatedAt(customer.getCreatedAt());
         dto.setUpdatedAt(customer.getUpdatedAt());
         dto.setVersion(customer.getVersion());
         return dto;
+    }
+
+    private String normalizeStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return CustomerEntity.DEFAULT_STATUS;
+        }
+        return status.trim().toUpperCase(Locale.ENGLISH);
+    }
+
+    private String normalizeNullable(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

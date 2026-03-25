@@ -41,6 +41,9 @@ public class SupplierEntity {
     @Column(columnDefinition = "text")
     private String address;
 
+    @Column(columnDefinition = "text")
+    private String notes;
+
     @Column(nullable = false, length = 50)
     private String status;
 
@@ -118,6 +121,14 @@ public class SupplierEntity {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 
     public Instant getCreatedAt() {

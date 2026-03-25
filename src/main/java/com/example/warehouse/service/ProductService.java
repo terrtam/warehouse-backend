@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -29,6 +30,9 @@ public class ProductService {
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+
+    @Autowired
+    private EntityAuditService entityAuditService;
 
     @Transactional(readOnly = true)
     public Page<ProductDto> listProducts(String q, String status, UUID categoryId, Pageable pageable) {
@@ -73,6 +77,7 @@ public class ProductService {
         applyRequest(product, request);
 
         Product saved = productRepository.save(product);
+        entityAuditService.log("PRODUCT", saved.getId(), "CREATE", null, saved.getStatus());
         eventPublisher.publishEvent(ProductChangedEvent.created(saved.getId(), saved.getVersion()));
 
         return toDto(saved);
@@ -95,6 +100,7 @@ public class ProductService {
 
         applyRequest(product, request);
         Product saved = productRepository.save(product);
+        entityAuditService.log("PRODUCT", saved.getId(), "UPDATE", null, saved.getStatus());
         eventPublisher.publishEvent(ProductChangedEvent.updated(saved.getId(), saved.getVersion()));
 
         return toDto(saved);
@@ -104,7 +110,14 @@ public class ProductService {
     public void deleteProduct(UUID id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Product not found"));
-        productRepository.delete(product);
+        String oldStatus = product.getStatus();
+        if ("INACTIVE".equalsIgnoreCase(oldStatus)) {
+            return;
+        }
+        product.setStatus("INACTIVE");
+        Product saved = productRepository.saveAndFlush(product);
+        entityAuditService.log("PRODUCT", saved.getId(), "DEACTIVATE", oldStatus, saved.getStatus());
+        eventPublisher.publishEvent(ProductChangedEvent.updated(saved.getId(), saved.getVersion()));
     }
 
     private void applyRequest(Product product, CreateProductRequest request) {
@@ -161,7 +174,7 @@ public class ProductService {
         product.setDefaultSalePrice(defaultSalePrice);
         product.setCostPrice(costPrice);
         product.setReorderThreshold(reorderThreshold);
-        product.setStatus(status);
+        product.setStatus(normalizeStatus(status));
     }
 
     private ProductDto toDto(Product product) {
@@ -205,5 +218,12 @@ public class ProductService {
         if (value != null && value < 0) {
             throw new ValidationException(field + " must be non-negative");
         }
+    }
+
+    private String normalizeStatus(String value) {
+        if (value == null || value.isBlank()) {
+            return "ACTIVE";
+        }
+        return value.trim().toUpperCase(Locale.ENGLISH);
     }
 }

@@ -22,8 +22,12 @@ public class UpdateCustomerRequest {
     @Size(max = 30)
     private String phone;
 
+    private String address;
+
     @Size(max = 30)
     private String status;
+
+    private String notes;
 
     public Long getVersion() {
         return version;
@@ -63,5 +67,21 @@ public class UpdateCustomerRequest {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 }

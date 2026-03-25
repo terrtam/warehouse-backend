@@ -39,8 +39,14 @@ public class CustomerEntity {
     @Column(length = 30)
     private String phone;
 
+    @Column(columnDefinition = "text")
+    private String address;
+
     @Column(nullable = false, length = 30)
     private String status;
+
+    @Column(columnDefinition = "text")
+    private String notes;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -108,6 +114,22 @@ public class CustomerEntity {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 
     public Instant getCreatedAt() {
