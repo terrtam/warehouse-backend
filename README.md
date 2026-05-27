@@ -130,6 +130,26 @@ Run the full stack:
 docker compose up --build
 ```
 
+Quick smoke check once the stack is up:
+
+```bash
+curl http://localhost:8080/health
+```
+
+Expected response:
+
+```json
+{"status":"UP","service":"warehouse-backend","timestamp":"..."}
+```
+
+If you want a deeper verification, log in and hit a protected API next:
+
+```bash
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"username\":\"admin\",\"password\":\"admin\"}"
+```
+
 ## Notes
 
 - `.env` is loaded automatically via `spring.config.import`.

@@ -35,6 +35,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private JwtUtil jwtUtil;
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return !isProtectedRequest(uri);
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         request.setAttribute(JWT_FILTER_RAN_ATTRIBUTE, Boolean.TRUE);
@@ -74,7 +80,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         logger.debug("JWT validation failed for {}: {}", request.getRequestURI(), ex.getMessage());
                     }
                 }
-            } else if (isProtectedRequest(request)) {
+            } else if (isProtectedRequest(request.getRequestURI())) {
                 request.setAttribute(JWT_FAILURE_ATTRIBUTE, "Missing bearer token");
                 if (logger.isDebugEnabled()) {
                     logger.debug("No JWT token resolved for protected endpoint {}", request.getRequestURI());
@@ -126,8 +132,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return findAuthorizationHeader(request) != null;
     }
 
-    private boolean isProtectedRequest(HttpServletRequest request) {
-        String uri = request.getRequestURI();
+    private boolean isProtectedRequest(String uri) {
         return uri.startsWith("/api/") || uri.startsWith("/ws/");
     }
 
