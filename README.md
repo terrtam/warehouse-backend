@@ -114,6 +114,22 @@ WMS_EMAIL_FROM=no-reply@warehouse.local
 ./mvnw spring-boot:run
 ```
 
+## Docker Setup
+
+This repository includes Docker support for local development.
+
+Services:
+
+- Backend: `http://localhost:8080`
+- Frontend: `http://localhost:3000`
+- PostgreSQL: `localhost:5432`
+
+Run the full stack:
+
+```bash
+docker compose up --build
+```
+
 ## Notes
 
 - `.env` is loaded automatically via `spring.config.import`.
