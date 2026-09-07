@@ -104,6 +104,28 @@ WMS_SMTP_STARTTLS_ENABLE=false
 WMS_EMAIL_FROM=no-reply@warehouse.local
 ```
 
+### AWS Production Variables
+
+For ECS/Fargate production, set the same variables through task definition environment variables or, preferably, inject them from AWS Secrets Manager / SSM Parameter Store.
+
+Recommended production mapping:
+
+- `WMS_DB_URL` -> RDS PostgreSQL JDBC URL
+- `WMS_DB_USERNAME` -> RDS master or app user
+- `WMS_DB_PASSWORD` -> AWS secret value
+- `WMS_JWT_SECRET` -> AWS secret value
+- `WMS_COMMUNICATION_EMAIL_ENABLED` -> `true` only if SES/SMTP is configured
+- `WMS_SMTP_HOST` / `WMS_SMTP_PORT` / `WMS_SMTP_USERNAME` / `WMS_SMTP_PASSWORD` / `WMS_SMTP_AUTH` / `WMS_SMTP_STARTTLS_ENABLE` -> SES SMTP or another mail provider
+- `WMS_EMAIL_FROM` -> verified sender address
+
+Recommended ECS runtime settings:
+
+- Send app logs to CloudWatch Logs
+- Expose container port `8080`
+- Place the service behind an Application Load Balancer
+- Allow security-group egress to RDS and SMTP endpoints
+- Keep Flyway enabled so schema migrations apply on startup
+
 ## Setup Instructions
 
 1. Ensure PostgreSQL is running and the database in `WMS_DB_URL` exists.
@@ -153,5 +175,17 @@ curl -X POST http://localhost:8080/auth/login \
 ## Notes
 
 - `.env` is loaded automatically via `spring.config.import`.
+- The backend is configured to read all runtime settings from environment variables, which makes it suitable for ECS task definitions, Secrets Manager, or SSM Parameter Store.
 - WebSocket endpoint: `/ws`
 - STOMP topics: `/topic/products`, `/topic/categories`, `/topic/inventory`, `/topic/orders`, `/topic/customers`, `/topic/suppliers`, `/topic/communications`
+
+## AWS Deployment Checklist
+
+1. Create an RDS PostgreSQL instance and initialize the target database.
+2. Create an ECR repository for the backend image.
+3. Create an ECS cluster with a Fargate service and task definition.
+4. Attach the task to an Application Load Balancer listening on HTTP/HTTPS.
+5. Store secrets in AWS Secrets Manager or SSM Parameter Store and reference them in the task definition.
+6. Configure a CloudWatch log group for backend container logs.
+7. If production email is required, verify the sender identity in SES and use SES SMTP credentials or another approved SMTP provider.
+8. Deploy the backend image from the main-branch GitHub Actions workflow and confirm Flyway migrations run successfully on startup.
