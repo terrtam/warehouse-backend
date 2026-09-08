@@ -47,11 +47,14 @@ jobs:
         run: |
           IMAGE_TAG=${GITHUB_SHA::7}
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          IMAGE_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          IMAGE_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}"
           echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           echo "image_uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push backend image
         run: |
-          docker build -t "${{ steps.image.outputs.image_uri }}" .
-          docker push "${{ steps.image.outputs.image_uri }}"
+          IMAGE_URI="${{ steps.image.outputs.image_uri }}"
+          TAG="${{ steps.image.outputs.image_tag }}"
+          docker build -t "${IMAGE_URI}:${TAG}" -t "${IMAGE_URI}:latest" .
+          docker push "${IMAGE_URI}:${TAG}"
+          docker push "${IMAGE_URI}:latest"
