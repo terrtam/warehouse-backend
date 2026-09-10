@@ -31,6 +31,8 @@ spring:
     enabled: true
 
 wms:
+  cors:
+    allowed-origins: ${WMS_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,https://d2wt5en1aa4ldp.cloudfront.net}
   communication:
     email:
       enabled: ${WMS_COMMUNICATION_EMAIL_ENABLED:false}
